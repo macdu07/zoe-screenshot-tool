@@ -1,0 +1,30 @@
+{
+  "name": "zoe-screenshot-tool",
+  "version": "1.0.0",
+  "description": "Full page high-resolution website screenshot tool (JPG, PNG, WEBP)",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node test/screenshot.test.js"
+  },
+  "keywords": [
+    "screenshot",
+    "puppeteer",
+    "fullpage",
+    "high-resolution",
+    "retina",
+    "webp",
+    "png",
+    "jpg"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "morgan": "^1.10.0",
+    "puppeteer": "^24.4.0"
+  }
+}

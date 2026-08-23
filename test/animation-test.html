@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scroll Animation Test Site</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #111;
+      color: #fff;
+    }
+    .section {
+      min-height: 80vh;
+      padding: 60px 40px;
+      border-bottom: 1px solid #333;
+    }
+    /* Scroll Reveal simulation (opacity: 0 by default) */
+    .animate-on-scroll {
+      opacity: 0;
+      transform: translateY(60px);
+      transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      background: #222;
+      padding: 40px;
+      border-radius: 12px;
+      border: 1px solid #444;
+      margin: 30px 0;
+    }
+    .animate-on-scroll.in-view {
+      opacity: 1;
+      transform: translateY(0);
+      background: #1e3a29;
+      border-color: #a7c080;
+    }
+    /* AOS simulation */
+    [data-aos] {
+      opacity: 0;
+      transform: translateY(50px);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    [data-aos].aos-animate {
+      opacity: 1;
+      transform: none;
+      background: #2d353b;
+    }
+  </style>
+</head>
+<body>
+  <div class="section">
+    <h1>Section 1 - Above the fold</h1>
+    <p>This content is visible immediately.</p>
+  </div>
+
+  <div class="section">
+    <h1>Section 2 - Scroll Entrance with IntersectionObserver</h1>
+    <div class="animate-on-scroll" id="card-1">
+      <h2>Animated Card #1</h2>
+      <p>This card only becomes visible when scrolled into view!</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h1>Section 3 - AOS library simulation</h1>
+    <div data-aos="fade-up" id="card-2" style="padding: 40px; border-radius: 12px; border: 1px solid #444;">
+      <h2>AOS Animated Card #2</h2>
+      <p>This card uses data-aos="fade-up" and requires .aos-animate to be visible.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <h1>Section 4 - Lazy image & final section</h1>
+    <div class="animate-on-scroll" id="card-3">
+      <h2>Animated Card #3 (Bottom)</h2>
+      <p>Bottom-most card with entrance animation.</p>
+    </div>
+  </div>
+
+  <script>
+    // IntersectionObserver to reveal elements on scroll
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('in-view');
+        } else {
+          // Many sites reset when scrolling out!
+          entry.target.classList.remove('in-view');
+        }
+      });
+    }, { threshold: 0.2 });
+
+    document.querySelectorAll('.animate-on-scroll').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zoe Screenshot - High-Resolution Full Page Screenshot Tool</title>
+  <meta name="description" content="Zoe Screenshot - Paste any URL and get a pixel-perfect, full page high-resolution screenshot in PNG, JPG, or WEBP. Fast, free, and no installation required.">
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Ambient background glow effect -->
+  <div class="glow-bg"></div>
+
+  <div class="app-wrapper">
+    <!-- Header Section -->
+    <header class="app-header">
+      <div class="header-badge">
+        <i class="ph-bold ph-aperture"></i> Zoe Screenshot Engine
+      </div>
+      <h1 class="gradient-title">Zoe Screenshot</h1>
+      <h2 class="subtitle">Capture Any Entire Website</h2>
+      <p class="description">
+        Paste any URL and get a pixel-perfect, full page screenshot of the entire website.
+        No extension to install, no software to download. Just results in seconds.
+      </p>
+
+      <!-- Quick demo pills -->
+      <div class="quick-demos">
+        <span class="quick-label">Try popular sites:</span>
+        <button type="button" class="demo-pill" data-url="https://stripe.com">
+          <i class="ph-bold ph-stripe-logo"></i> stripe.com
+        </button>
+        <button type="button" class="demo-pill" data-url="https://github.com">
+          <i class="ph-bold ph-github-logo"></i> github.com
+        </button>
+        <button type="button" class="demo-pill" data-url="https://apple.com">
+          <i class="ph-bold ph-apple-logo"></i> apple.com
+        </button>
+        <button type="button" class="demo-pill" data-url="https://vercel.com">
+          <i class="ph-bold ph-triangle"></i> vercel.com
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="main-grid">
+      <!-- Left Controls Sidebar -->
+      <aside class="control-panel card">
+        <form id="screenshot-form">
+          <!-- Website URL -->
+          <div class="form-group">
+            <label for="url-input" class="form-label">
+              <span>Website URL</span>
+              <span class="url-hint">https:// is optional</span>
+            </label>
+            <div class="input-with-icon">
+              <i class="ph-bold ph-globe icon-left"></i>
+              <input 
+                type="text" 
+                id="url-input" 
+                name="url" 
+                placeholder="example.com" 
+                required 
+                autocomplete="off" 
+                spellcheck="false"
+              />
+              <button type="button" id="clear-url-btn" class="clear-btn" title="Clear URL" style="display: none;">
+                <i class="ph-bold ph-x"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Device Selector Tabs -->
+          <div class="form-group">
+            <label class="form-label">Device</label>
+            <div class="segmented-control" id="device-selector">
+              <button type="button" class="segment-btn active" data-device="desktop">Desktop</button>
+              <button type="button" class="segment-btn" data-device="tablet">Tablet</button>
+              <button type="button" class="segment-btn" data-device="mobile">Mobile</button>
+              <button type="button" class="segment-btn" data-device="custom">Custom</button>
+            </div>
+          </div>
+
+          <!-- Dimension Inputs -->
+          <div class="dimensions-row">
+            <div class="form-group flex-1">
+              <label for="width-input" class="form-label">Width in px</label>
+              <input type="number" id="width-input" name="width" value="1920" min="320" max="3840" step="1" />
+            </div>
+            <div class="form-group flex-1" id="height-group">
+              <label for="height-input" class="form-label">Height in px</label>
+              <input type="number" id="height-input" name="height" value="1080" min="240" max="2160" step="1" />
+            </div>
+          </div>
+
+          <!-- Capture Scope: Full Page vs Viewport -->
+          <div class="form-group">
+            <label class="form-label">Capture Mode</label>
+            <div class="segmented-control" id="scope-selector">
+              <button type="button" class="segment-btn active" data-scope="full">
+                <i class="ph-bold ph-arrows-out-line-vertical"></i> Full Page
+              </button>
+              <button type="button" class="segment-btn" data-scope="viewport">
+                <i class="ph-bold ph-frame-corners"></i> Viewport Only
+              </button>
+            </div>
+          </div>
+
+          <!-- Format Selector -->
+          <div class="form-group">
+            <label class="form-label">Format</label>
+            <div class="segmented-control" id="format-selector">
+              <button type="button" class="segment-btn active" data-format="png">PNG</button>
+              <button type="button" class="segment-btn" data-format="jpg">JPG</button>
+              <button type="button" class="segment-btn" data-format="webp">WEBP</button>
+            </div>
+          </div>
+
+          <!-- Resolution Scale Factor (Retina) -->
+          <div class="form-group">
+            <label class="form-label">
+              <span>Resolution Quality</span>
+              <span class="badge-tag">Retina</span>
+            </label>
+            <div class="segmented-control scale-control" id="scale-selector">
+              <button type="button" class="segment-btn" data-scale="1">1x Std</button>
+              <button type="button" class="segment-btn active" data-scale="2">2x Retina</button>
+              <button type="button" class="segment-btn" data-scale="3">3x Ultra</button>
+            </div>
+          </div>
+
+          <!-- Quality Slider (Conditional for JPG/WEBP) -->
+          <div class="form-group" id="quality-container" style="display: none;">
+            <div class="slider-header">
+              <label for="quality-input" class="form-label">Image Quality</label>
+              <span id="quality-val" class="slider-value">90%</span>
+            </div>
+            <input type="range" id="quality-input" min="30" max="100" value="90" class="range-slider">
+          </div>
+
+          <!-- Advanced Options Accordion -->
+          <div class="advanced-accordion">
+            <button type="button" class="accordion-trigger" id="advanced-toggle">
+              <span class="trigger-label">
+                <i class="ph-bold ph-sliders"></i> Advanced Options
+              </span>
+              <i class="ph-bold ph-caret-down accordion-icon"></i>
+            </button>
+            <div class="accordion-content" id="advanced-body">
+              <!-- Trigger entrance scroll animations -->
+              <label class="custom-checkbox">
+                <input type="checkbox" id="wait-animations" checked />
+                <span class="checkmark"></span>
+                <span class="checkbox-label">
+                  Trigger & wait for scroll animations
+                  <i class="ph ph-question" title="Automatically reveals entrance animations (Framer Motion, AOS, GSAP, Webflow) before capturing"></i>
+                </span>
+              </label>
+
+              <!-- Block ads and banners -->
+              <label class="custom-checkbox">
+                <input type="checkbox" id="block-banners" checked />
+                <span class="checkmark"></span>
+                <span class="checkbox-label">
+                  Block ads & cookie banners
+                  <i class="ph ph-question" title="Removes GDPR overlays, cookie popups, and sticky banners"></i>
+                </span>
+              </label>
+
+              <!-- Color Scheme Emulation -->
+              <div class="form-subgroup">
+                <label class="form-sublabel">Color Theme</label>
+                <div class="theme-buttons" id="theme-selector">
+                  <button type="button" class="theme-btn active" data-theme="no-preference">Default</button>
+                  <button type="button" class="theme-btn" data-theme="light"><i class="ph-bold ph-sun"></i> Light</button>
+                  <button type="button" class="theme-btn" data-theme="dark"><i class="ph-bold ph-moon"></i> Dark</button>
+                </div>
+              </div>
+
+              <!-- Wait delay -->
+              <div class="form-subgroup">
+                <label for="delay-select" class="form-sublabel">Wait Delay</label>
+                <select id="delay-select" class="custom-select">
+                  <option value="0">0s (Fastest)</option>
+                  <option value="1000">1s (Allow animations)</option>
+                  <option value="2500">2.5s (Heavy SPAs / 3D)</option>
+                  <option value="5000">5s (Complex dashboards)</option>
+                </select>
+              </div>
+
+              <!-- Use Cache -->
+              <label class="custom-checkbox">
+                <input type="checkbox" id="use-cache" checked />
+                <span class="checkmark"></span>
+                <span class="checkbox-label">
+                  Use cache
+                  <i class="ph ph-question" title="Loads instantly if captured recently"></i>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Submit Action Button -->
+          <button type="submit" id="generate-btn" class="generate-btn">
+            <span class="btn-icon"><i class="ph-bold ph-camera"></i></span>
+            <span class="btn-text">Generate Screenshot</span>
+            <span class="btn-spinner" style="display: none;">
+              <i class="ph-bold ph-spinner spinner-spin"></i>
+            </span>
+          </button>
+        </form>
+
+        <!-- Recent Screenshots Section -->
+        <div class="recent-section">
+          <div class="recent-header">
+            <h3 class="recent-title">
+              <i class="ph-bold ph-clock-counter-clockwise"></i> Recent Screenshots
+            </h3>
+            <button type="button" id="clear-history-btn" class="clear-history-link" title="Clear all history">Clear</button>
+          </div>
+          <div class="recent-list" id="recent-container">
+            <div class="recent-empty">No captures yet. Generate your first one above!</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Main Preview Area -->
+      <section class="preview-panel card">
+        <!-- Mockup Browser Header Bar -->
+        <div class="browser-header">
+          <div class="browser-dots">
+            <span class="dot dot-red"></span>
+            <span class="dot dot-yellow"></span>
+            <span class="dot dot-green"></span>
+          </div>
+          <div class="browser-address-bar">
+            <i class="ph-bold ph-lock-simple lock-icon"></i>
+            <span id="preview-url-display" class="browser-url-text">https://example.com</span>
+          </div>
+          <div class="browser-actions-group" id="browser-actions" style="display: none;">
+            <button type="button" class="tool-btn" id="zoom-out-btn" title="Zoom Out (-)">
+              <i class="ph-bold ph-magnifying-glass-minus"></i>
+            </button>
+            <span id="zoom-level-text" class="zoom-level">100%</span>
+            <button type="button" class="tool-btn" id="zoom-in-btn" title="Zoom In (+)">
+              <i class="ph-bold ph-magnifying-glass-plus"></i>
+            </button>
+            <button type="button" class="tool-btn" id="zoom-reset-btn" title="Reset Zoom">
+              <i class="ph-bold ph-arrows-in"></i>
+            </button>
+            <div class="tool-divider"></div>
+            <button type="button" class="tool-btn action-copy" id="copy-clipboard-btn" title="Copy Image to Clipboard">
+              <i class="ph-bold ph-copy"></i>
+              <span>Copy</span>
+            </button>
+            <div class="dropdown-container">
+              <button type="button" class="tool-btn action-download" id="download-dropdown-btn">
+                <i class="ph-bold ph-download-simple"></i>
+                <span>Download</span>
+                <i class="ph-bold ph-caret-down"></i>
+              </button>
+              <div class="dropdown-menu" id="download-menu">
+                <a href="#" class="dropdown-item" id="download-native-link" download>
+                  <i class="ph-bold ph-file-image"></i>
+                  <span>Current Format (<span id="current-format-label">PNG</span>)</span>
+                </a>
+                <a href="#" class="dropdown-item" id="open-new-tab-link" target="_blank">
+                  <i class="ph-bold ph-arrow-square-out"></i>
+                  <span>Open in Full Size Tab</span>
+                </a>
+                <button type="button" class="dropdown-item" id="copy-api-link-btn">
+                  <i class="ph-bold ph-code"></i>
+                  <span>Copy Direct API URL</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Viewport / Screen Area -->
+        <div class="preview-viewport" id="preview-viewport">
+          <!-- Empty Initial State -->
+          <div class="empty-state" id="empty-state">
+            <div class="empty-icon-circle">
+              <i class="ph ph-camera"></i>
+            </div>
+            <h3 class="empty-title">Enter a URL and click Generate Screenshot</h3>
+            <p class="empty-desc">Your pixel-perfect full page screenshot will appear here</p>
+            <div class="empty-hints">
+              <div class="hint-item"><i class="ph-bold ph-check-circle"></i> High-resolution 2x/3x Retina rendering</div>
+              <div class="hint-item"><i class="ph-bold ph-check-circle"></i> Auto-scrolls to trigger all lazy-loaded images</div>
+              <div class="hint-item"><i class="ph-bold ph-check-circle"></i> Automatic cookie banner & ad popup removal</div>
+            </div>
+          </div>
+
+          <!-- Loading State with Step Tracker -->
+          <div class="loading-state" id="loading-state" style="display: none;">
+            <div class="loading-spinner-ring">
+              <div class="spinner-inner"></div>
+              <i class="ph-bold ph-camera camera-center-icon"></i>
+            </div>
+            <h3 class="loading-title" id="loading-status-text">Connecting to browser...</h3>
+            <p class="loading-sub" id="loading-url-text">https://example.com</p>
+            
+            <div class="progress-steps">
+              <div class="step active" id="step-1">
+                <span class="step-num">1</span>
+                <span class="step-name">Navigating</span>
+              </div>
+              <div class="step-line"></div>
+              <div class="step" id="step-2">
+                <span class="step-num">2</span>
+                <span class="step-name">Auto-scrolling</span>
+              </div>
+              <div class="step-line"></div>
+              <div class="step" id="step-3">
+                <span class="step-num">3</span>
+                <span class="step-name">Rendering</span>
+              </div>
+              <div class="step-line"></div>
+              <div class="step" id="step-4">
+                <span class="step-num">4</span>
+                <span class="step-name">Saving</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Screenshot Viewport Container -->
+          <div class="screenshot-container" id="screenshot-container" style="display: none;">
+            <div class="image-wrapper" id="image-wrapper">
+              <img id="screenshot-img" src="" alt="Website Screenshot" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Image Info / Stats Floating Badge Bar -->
+        <div class="preview-footer-stats" id="preview-stats" style="display: none;">
+          <div class="stat-badge" title="Rendered Resolution">
+            <i class="ph-bold ph-frame-corners"></i>
+            <span id="stat-dimensions">1920 × 1080 px</span>
+          </div>
+          <div class="stat-badge" title="Image Format">
+            <i class="ph-bold ph-file-image"></i>
+            <span id="stat-format">PNG</span>
+          </div>
+          <div class="stat-badge" title="File Size">
+            <i class="ph-bold ph-hard-drive"></i>
+            <span id="stat-size">1.2 MB</span>
+          </div>
+          <div class="stat-badge" title="Capture Duration">
+            <i class="ph-bold ph-timer"></i>
+            <span id="stat-duration">2.4s</span>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Toast Notification System -->
+    <div class="toast-container" id="toast-container"></div>
+  </div>
+
+  <!-- Main JavaScript App -->
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
