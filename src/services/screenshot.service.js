@@ -7,14 +7,41 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STORAGE_DIR = path.resolve(__dirname, '../../storage/screenshots');
+const HISTORY_FILE = path.resolve(__dirname, '../../storage/history.json');
 
 // Ensure storage directory exists
 if (!fs.existsSync(STORAGE_DIR)) {
   fs.mkdirSync(STORAGE_DIR, { recursive: true });
 }
 
-// In-memory capture history (latest 50)
-const screenshotHistory = [];
+/**
+ * Load history from disk (returns array)
+ */
+function loadHistory() {
+  try {
+    if (fs.existsSync(HISTORY_FILE)) {
+      const raw = fs.readFileSync(HISTORY_FILE, 'utf8');
+      return JSON.parse(raw) || [];
+    }
+  } catch (e) {
+    console.warn('Could not read history.json, starting fresh:', e.message);
+  }
+  return [];
+}
+
+/**
+ * Persist history array to disk
+ */
+function saveHistory(history) {
+  try {
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Could not save history.json:', e.message);
+  }
+}
+
+// Persistent capture history (latest 30), backed by history.json
+const screenshotHistory = loadHistory();
 
 let browserInstance = null;
 
@@ -492,6 +519,7 @@ export async function captureScreenshot(options = {}) {
     if (screenshotHistory.length > 30) {
       screenshotHistory.pop();
     }
+    saveHistory(screenshotHistory);
 
     return {
       success: true,
@@ -538,6 +566,7 @@ export async function deleteScreenshot(id) {
       console.error('Error deleting file:', e);
     }
     screenshotHistory.splice(index, 1);
+    saveHistory(screenshotHistory);
     return true;
   }
   return false;

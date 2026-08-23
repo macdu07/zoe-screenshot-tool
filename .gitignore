@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Generated screenshots and history (runtime data)
+storage/screenshots/*
+storage/history.json
+
+# Keep the folder structure in git
+!storage/screenshots/.gitkeep
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
