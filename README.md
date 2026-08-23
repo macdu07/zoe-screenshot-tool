@@ -1,10 +1,10 @@
-# Zoe Screenshot 📸
+# Zoe Screenshot
 
 A high-performance, pixel-perfect website screenshot tool and API. Built with **Node.js**, **Express**, and **Puppeteer**.
 
 ![App Preview](public/preview.png)
 
-## ✨ Features
+## Features
 
 - **Full-Page & Viewport Modes**: Capture the entire scrollable height or only the above-the-fold viewport.
 - **Multiple Formats**: Export in **PNG** (lossless), **JPG** (customizable quality), and **WEBP** (modern, ultra-lightweight).
@@ -27,7 +27,7 @@ A high-performance, pixel-perfect website screenshot tool and API. Built with **
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install Dependencies
 ```bash
@@ -47,7 +47,7 @@ npm run dev
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### 1. Capture Screenshot (JSON Response)
 `POST /api/screenshot`
@@ -128,7 +128,7 @@ Embed screenshots directly into `<img>` tags or download instantly:
 
 ---
 
-## 🧪 Testing
+## Testing
 
 Run test suite:
 ```bash
@@ -141,7 +141,7 @@ node test/test-formats.js
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Runtime**: Node.js
 - **Framework**: Express.js
