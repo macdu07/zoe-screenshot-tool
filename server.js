@@ -36,10 +36,10 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`====================================================`);
-  console.log(`🚀 Screenshot Tool server running at http://localhost:${PORT}`);
-  console.log(`🌐 API Endpoint: http://localhost:${PORT}/api/screenshot`);
-  console.log(`📷 Direct API:   http://localhost:${PORT}/api/screenshot/direct?url=https://github.com`);
+  console.log(`🚀 Screenshot Tool server running at http://0.0.0.0:${PORT}`);
+  console.log(`🌐 API Endpoint: http://0.0.0.0:${PORT}/api/screenshot`);
+  console.log(`📷 Direct API:   http://0.0.0.0:${PORT}/api/screenshot/direct?url=https://github.com`);
   console.log(`====================================================`);
 });
