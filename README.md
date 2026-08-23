@@ -1,6 +1,6 @@
-# Full Page High-Resolution Website Screenshot Tool 📸
+# Zoe Screenshot 📸
 
-A high-performance, pixel-perfect website screenshot tool and API inspired by [Microlink](https://microlink.io/tools/website-screenshot/full-page). Built with **Node.js**, **Express**, and **Puppeteer**.
+A high-performance, pixel-perfect website screenshot tool and API. Built with **Node.js**, **Express**, and **Puppeteer**.
 
 ![App Preview](public/preview.png)
 
