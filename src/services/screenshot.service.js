@@ -571,3 +571,41 @@ export async function deleteScreenshot(id) {
   }
   return false;
 }
+
+/**
+ * Clear ALL history entries and delete all screenshot files from disk
+ */
+export async function clearAllHistory() {
+  let deleted = 0;
+
+  // Delete every file referenced in history
+  for (const item of screenshotHistory) {
+    const filePath = path.join(STORAGE_DIR, item.filename);
+    try {
+      if (fs.existsSync(filePath)) {
+        await fs.promises.unlink(filePath);
+        deleted++;
+      }
+    } catch (e) {
+      console.error('Error deleting file:', item.filename, e);
+    }
+  }
+
+  // Also sweep the directory for any orphaned files not in history
+  try {
+    const files = await fs.promises.readdir(STORAGE_DIR);
+    for (const file of files) {
+      if (file === '.gitkeep') continue;
+      try {
+        await fs.promises.unlink(path.join(STORAGE_DIR, file));
+        deleted++;
+      } catch (e) {}
+    }
+  } catch (e) {}
+
+  // Clear in-memory array and persist
+  screenshotHistory.length = 0;
+  saveHistory(screenshotHistory);
+
+  return { deleted };
+}

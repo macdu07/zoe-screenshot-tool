@@ -275,7 +275,12 @@ function bindEvents() {
   });
 
   // Clear History
-  elements.clearHistoryBtn.addEventListener('click', () => {
+  elements.clearHistoryBtn.addEventListener('click', async () => {
+    try {
+      await fetch('/api/history', { method: 'DELETE' });
+    } catch (e) {
+      console.warn('Could not reach backend to clear history:', e);
+    }
     state.history = [];
     localStorage.removeItem('screenshot_history');
     renderHistory();

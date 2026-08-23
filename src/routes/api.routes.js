@@ -6,6 +6,7 @@ import {
   captureScreenshot,
   getHistory,
   deleteScreenshot,
+  clearAllHistory,
   normalizeUrl
 } from '../services/screenshot.service.js';
 
@@ -135,6 +136,19 @@ router.get('/history', (req, res) => {
     success: true,
     data: getHistory()
   });
+});
+
+/**
+ * DELETE /api/history
+ * Clear ALL history entries and delete all screenshot files from disk
+ */
+router.delete('/history', async (req, res) => {
+  try {
+    const result = await clearAllHistory();
+    return res.json({ success: true, deleted: result.deleted });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 /**
