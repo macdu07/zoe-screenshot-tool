@@ -2,7 +2,7 @@
 
 A high-performance, pixel-perfect website screenshot tool and API. Built with **Node.js**, **Express**, and **Puppeteer**.
 
-![App Preview](public/preview1.png)
+![App Preview](public/preview.png)
 
 ## Features
 
