@@ -38,7 +38,7 @@ npm install
 ```bash
 npm start
 ```
-The application will be live at `http://localhost:4000`.
+The application will be live at `http://localhost:3000`.
 
 For auto-reloading during development:
 ```bash

@@ -52,7 +52,7 @@ RUN apt-get update \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
     NODE_ENV=production \
-    PORT=4000
+    PORT=3000
 
 # Set working directory
 WORKDIR /app
@@ -70,7 +70,7 @@ COPY . .
 RUN mkdir -p storage/screenshots && chmod -R 777 storage
 
 # Expose port
-EXPOSE 4000
+EXPOSE 3000
 
 # Start application
 CMD ["node", "server.js"]
