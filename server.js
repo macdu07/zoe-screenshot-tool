@@ -20,6 +20,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static files
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/storage/screenshots', express.static(path.join(__dirname, 'storage/screenshots')));
+app.use('/test-static', express.static(path.join(__dirname, 'test')));
 
 // API Routes
 app.use('/api', apiRouter);

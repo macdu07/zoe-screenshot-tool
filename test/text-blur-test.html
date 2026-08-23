@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Staggered Blur Text Test</title>
+  <style>
+    body { font-family: sans-serif; background: #fff; color: #000; padding: 40px; }
+    h1 { font-size: 3rem; }
+    /* Staggered text splitting simulation */
+    .word {
+      display: inline-block;
+      opacity: 0;
+      filter: blur(12px);
+      transform: translateY(20px);
+      transition: all 1.2s ease;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    <span class="word" style="transition-delay: 0.1s">Our</span>
+    <span class="word" style="transition-delay: 0.2s">Mission:</span>
+    <span class="word" style="transition-delay: 0.3s">To</span>
+    <span class="word" style="transition-delay: 0.4s">Power</span>
+    <span class="word" style="transition-delay: 0.5s">Your</span>
+    <span class="word" style="transition-delay: 1.5s">Growth</span>
+  </h1>
+
+  <h2>
+    <span class="word" style="transition-delay: 0.1s">Founded</span>
+    <span class="word" style="transition-delay: 0.2s">on</span>
+    <span class="word" style="transition-delay: 0.3s">a</span>
+    <span class="word" style="transition-delay: 0.4s">Legacy</span>
+    <span class="word" style="transition-delay: 0.5s">of</span>
+    <span class="word" style="transition-delay: 2.0s">Experience</span>
+  </h2>
+</body>
+</html>

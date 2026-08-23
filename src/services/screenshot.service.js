@@ -86,7 +86,7 @@ export function normalizeUrl(inputUrl) {
     throw new Error('Please provide a valid website URL');
   }
   let trimmed = inputUrl.trim();
-  if (!/^https?:\/\//i.test(trimmed)) {
+  if (!/^(https?|file):\/\//i.test(trimmed)) {
     trimmed = `https://${trimmed}`;
   }
   try {
@@ -142,7 +142,7 @@ async function preparePageForCapture(page, options = {}) {
       await new Promise((r) => setTimeout(r, 150));
     });
 
-    // 3. Force-reveal and lock entrance animation elements so they do NOT disappear or stay at opacity 0
+    // 3. Force-reveal and lock entrance animation elements, text splitters, and un-blur all staggered words
     await page.evaluate(() => {
       // (a) Trigger common animation libraries
       // AOS (Animate on Scroll)
@@ -151,6 +151,7 @@ async function preparePageForCapture(page, options = {}) {
         el.style.opacity = '1';
         el.style.transform = 'none';
         el.style.visibility = 'visible';
+        el.style.filter = 'none';
       });
 
       // WOW.js / ScrollReveal
@@ -158,12 +159,14 @@ async function preparePageForCapture(page, options = {}) {
         el.style.visibility = 'visible';
         el.style.opacity = '1';
         el.style.transform = 'none';
+        el.style.filter = 'none';
       });
 
       // Sal.js
       document.querySelectorAll('[data-sal]').forEach((el) => {
         el.classList.add('sal-animate');
         el.style.opacity = '1';
+        el.style.filter = 'none';
       });
 
       // Custom in-view / revealed / animate-on-scroll classes
@@ -172,9 +175,57 @@ async function preparePageForCapture(page, options = {}) {
         el.style.opacity = '1';
         el.style.transform = 'none';
         el.style.visibility = 'visible';
+        el.style.filter = 'none';
       });
 
-      // (b) Force lazy-loaded images & iframes to resolve
+      // (b) Advance GSAP Timelines and ScrollTriggers to 100% completed state if present
+      try {
+        if (window.gsap && window.gsap.globalTimeline) {
+          window.gsap.globalTimeline.progress(1);
+        }
+        if (window.ScrollTrigger && typeof window.ScrollTrigger.getAll === 'function') {
+          window.ScrollTrigger.getAll().forEach((st) => {
+            try {
+              if (typeof st.progress === 'function') {
+                st.progress(1);
+              }
+            } catch (e) {}
+          });
+        }
+      } catch (e) {}
+
+      // (c) Un-blur and reveal all staggered text spans (SplitText, SplitType, Framer Motion, Webflow text reveals)
+      const textTargets = document.querySelectorAll(`
+        h1, h2, h3, h4, h5, h6, p, blockquote,
+        h1 *, h2 *, h3 *, h4 *, h5 *, h6 *, p *,
+        .word, .char, .line, .letter,
+        [data-char], [data-word], [data-line],
+        [class*="char"], [class*="word"], [class*="split"], [class*="letter"],
+        [data-split], [data-splitting], .split-item, .splitting,
+        span[style*="opacity"], span[style*="blur"], span[style*="filter"], span[style*="transform"],
+        div[style*="opacity"], div[style*="blur"], div[style*="filter"]
+      `);
+
+      textTargets.forEach((el) => {
+        // Strip any blur filter
+        if (el.style.filter && el.style.filter.includes('blur')) {
+          el.style.filter = 'none';
+        }
+        // Force full opacity on text
+        if (el.style.opacity && parseFloat(el.style.opacity) < 1) {
+          el.style.opacity = '1';
+        }
+        // Clear transforms that might be halfway through sliding in
+        if (el.style.transform && (el.style.transform.includes('translate') || el.style.transform.includes('matrix'))) {
+          el.style.transform = 'none';
+        }
+        // Remove clip-path text reveals
+        if (el.style.clipPath) {
+          el.style.clipPath = 'none';
+        }
+      });
+
+      // (d) Force lazy-loaded images & iframes to resolve
       document.querySelectorAll('img[data-src], img[data-srcset], img[loading="lazy"]').forEach((img) => {
         if (img.dataset.src && !img.src) {
           img.src = img.dataset.src;
@@ -188,7 +239,7 @@ async function preparePageForCapture(page, options = {}) {
         }
       });
 
-      // (c) Fast-forward active Web Animations API instances to completed state
+      // (e) Fast-forward active Web Animations API instances to completed state
       if (typeof document.getAnimations === 'function') {
         try {
           document.getAnimations().forEach((anim) => {
@@ -203,22 +254,35 @@ async function preparePageForCapture(page, options = {}) {
         } catch (e) {}
       }
 
-      // (d) Scroll back to top
+      // (f) Scroll back to top
       window.scrollTo(0, 0);
       window.dispatchEvent(new Event('scroll', { bubbles: true }));
     });
 
-    // 4. Inject global CSS override to ensure all animated elements remain 100% visible and un-transitioned
+    // 4. Inject global CSS override to ensure all animated elements and text remain 100% sharp and visible
     await page.addStyleTag({
       content: `
-        /* Force entrance animated elements to stay visible and un-hidden */
-        [data-aos], [data-sal], .wow, .animate-on-scroll, .fade-in, .scroll-reveal {
+        /* Force entrance animated elements and text to stay sharp, un-blurred, and 100% visible */
+        [data-aos], [data-sal], .wow, .animate-on-scroll, .fade-in, .scroll-reveal,
+        h1, h2, h3, h4, h5, h6, p,
+        h1 *, h2 *, h3 *, h4 *, h5 *, h6 *, p *,
+        .word, .char, .line, .letter,
+        [data-char], [data-word], [data-line],
+        [class*="char"], [class*="word"], [class*="split"], [class*="letter"],
+        [data-split], [data-splitting], .split-item, .splitting {
+          filter: none !important;
           opacity: 1 !important;
           visibility: visible !important;
           transform: none !important;
+          clip-path: none !important;
+          -webkit-mask: none !important;
+          mask: none !important;
           transition-delay: 0s !important;
           animation-delay: 0s !important;
+          animation-duration: 0.001s !important;
+          transition-duration: 0.001s !important;
         }
+
         /* Disable sticky/fixed headers from covering entire page during full capture if needed */
         html {
           scroll-behavior: auto !important;
@@ -226,8 +290,8 @@ async function preparePageForCapture(page, options = {}) {
       `
     }).catch(() => {});
 
-    // Brief stabilization pause for paint cycle
-    await new Promise((r) => setTimeout(r, 400));
+    // Stabilization pause for paint cycle
+    await new Promise((r) => setTimeout(r, 600));
   }
 
   // 5. Additional user-configured delay
