@@ -49,7 +49,17 @@ let browserInstance = null;
  * Find the best available Chrome / Chromium executable
  */
 function findChromeExecutable() {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
+    return process.env.PUPPETEER_EXECUTABLE_PATH;
+  }
+
   const possiblePaths = [
+    // Linux / Docker paths
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    // macOS paths
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
     '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
     '/Applications/Chromium.app/Contents/MacOS/Chromium',
