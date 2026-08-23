@@ -1,0 +1,20 @@
+services:
+  zoe-screenshot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zoe-screenshot
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+    volumes:
+      - zoe_storage:/app/storage
+    shm_size: '2gb'
+
+volumes:
+  zoe_storage:
