@@ -1076,6 +1076,16 @@ input[type="number"]:focus,
   transition: transform var(--transition-fast);
 }
 
+.screenshot-container.viewport-capture {
+  min-height: 100%;
+  align-items: center;
+}
+
+.screenshot-container.viewport-capture .image-wrapper {
+  flex: 0 0 auto;
+  max-width: none;
+}
+
 .image-wrapper {
   background: var(--bg-card);
   border-radius: var(--radius-sm);

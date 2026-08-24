@@ -21,6 +21,7 @@ const state = {
   // UI state
   isLoading: false,
   zoom: 1.0,
+  autoFitPreview: false,
   currentScreenshot: null,
   history: []
 };
@@ -62,6 +63,7 @@ const elements = {
   loadingState: document.getElementById('loading-state'),
   loadingStatusText: document.getElementById('loading-status-text'),
   loadingUrlText: document.getElementById('loading-url-text'),
+  previewViewport: document.getElementById('preview-viewport'),
   screenshotContainer: document.getElementById('screenshot-container'),
   imageWrapper: document.getElementById('image-wrapper'),
   screenshotImg: document.getElementById('screenshot-img'),
@@ -244,7 +246,11 @@ function bindEvents() {
   // Zoom Controls
   elements.zoomInBtn.addEventListener('click', () => adjustZoom(0.15));
   elements.zoomOutBtn.addEventListener('click', () => adjustZoom(-0.15));
-  elements.zoomResetBtn.addEventListener('click', () => setZoom(1.0));
+  elements.zoomResetBtn.addEventListener('click', resetPreviewZoom);
+
+  window.addEventListener('resize', () => {
+    if (state.autoFitPreview && state.currentScreenshot?.fullPage === false) fitViewportCapture();
+  });
 
   // Copy to Clipboard
   elements.copyClipboardBtn.addEventListener('click', handleCopyToClipboard);
@@ -399,7 +405,11 @@ function displayScreenshot(data) {
   // Set image source
   elements.screenshotImg.src = data.viewUrl;
   elements.screenshotImg.onload = () => {
-    setZoom(1.0);
+    if (data.fullPage === false) {
+      fitViewportCapture();
+    } else {
+      resetFullPagePreview();
+    }
   };
 
   // Update stats
@@ -425,13 +435,56 @@ function displayScreenshot(data) {
  * Set Zoom Level
  */
 function setZoom(val) {
-  state.zoom = Math.min(Math.max(val, 0.25), 2.0);
-  elements.imageWrapper.style.transform = `scale(${state.zoom})`;
+  state.autoFitPreview = false;
+  state.zoom = Math.min(Math.max(val, 0.05), 2.0);
+
+  if (state.currentScreenshot?.fullPage === false && elements.screenshotImg.naturalWidth) {
+    elements.screenshotContainer.classList.add('viewport-capture');
+    elements.imageWrapper.style.transform = 'none';
+    elements.imageWrapper.style.width = `${Math.round(elements.screenshotImg.naturalWidth * state.zoom)}px`;
+  } else {
+    elements.imageWrapper.style.transform = `scale(${state.zoom})`;
+  }
+
   elements.zoomLevelText.textContent = `${Math.round(state.zoom * 100)}%`;
 }
 
 function adjustZoom(delta) {
   setZoom(state.zoom + delta);
+}
+
+function fitViewportCapture() {
+  const image = elements.screenshotImg;
+  const viewport = elements.previewViewport;
+  if (!image.naturalWidth || !image.naturalHeight) return;
+
+  const styles = getComputedStyle(viewport);
+  const availableWidth = viewport.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight);
+  const availableHeight = viewport.clientHeight - parseFloat(styles.paddingTop) - parseFloat(styles.paddingBottom);
+  const fitScale = Math.min(availableWidth / image.naturalWidth, availableHeight / image.naturalHeight, 1);
+
+  state.autoFitPreview = true;
+  state.zoom = fitScale;
+  elements.screenshotContainer.classList.add('viewport-capture');
+  elements.imageWrapper.style.transform = 'none';
+  elements.imageWrapper.style.width = `${Math.max(1, Math.floor(image.naturalWidth * fitScale))}px`;
+  elements.zoomLevelText.textContent = `${Math.round(fitScale * 100)}%`;
+  viewport.scrollTo({ top: 0, left: 0 });
+}
+
+function resetFullPagePreview() {
+  state.autoFitPreview = false;
+  elements.screenshotContainer.classList.remove('viewport-capture');
+  elements.imageWrapper.style.width = '';
+  setZoom(1.0);
+}
+
+function resetPreviewZoom() {
+  if (state.currentScreenshot?.fullPage === false) {
+    fitViewportCapture();
+  } else {
+    resetFullPagePreview();
+  }
 }
 
 /**
