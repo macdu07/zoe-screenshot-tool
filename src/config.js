@@ -1,3 +1,5 @@
+import crypto from 'node:crypto';
+
 function intEnv(name, fallback, min = 1) {
   const value = Number.parseInt(process.env[name], 10);
   return Number.isFinite(value) && value >= min ? value : fallback;
@@ -18,6 +20,7 @@ export const config = Object.freeze({
   trustProxyHops: intEnv('TRUST_PROXY_HOPS', 1),
   appUsername: process.env.APP_USERNAME || '',
   appPassword: process.env.APP_PASSWORD || '',
+  clientIdSecret: process.env.CLIENT_ID_SECRET || crypto.randomBytes(32).toString('hex'),
   allowPrivateNetwork: process.env.ALLOW_PRIVATE_NETWORK === 'true',
   exposeTestStatic: process.env.EXPOSE_TEST_STATIC === 'true'
 });

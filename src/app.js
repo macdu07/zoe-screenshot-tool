@@ -8,6 +8,7 @@ import apiRouter from './routes/api.routes.js';
 import { config } from './config.js';
 import { browserStatus, getBrowser } from './infrastructure/browser-manager.js';
 import { checkStorageReady, getCaptureQueueStats } from './services/screenshot.service.js';
+import { anonymousClient } from './middleware/anonymous-client.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -65,6 +66,7 @@ export function createApp() {
       return res.status(503).json({ status: 'not_ready', error: 'Browser or storage is unavailable' });
     }
   });
+  app.use(anonymousClient);
   app.use(optionalBasicAuth);
   app.use(express.static(path.join(rootDir, 'public')));
   app.use('/storage/screenshots', express.static(path.join(rootDir, 'storage/screenshots'), { fallthrough: false }));

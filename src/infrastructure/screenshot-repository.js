@@ -13,11 +13,13 @@ export class FileScreenshotRepository {
 
   async init() {
     await fs.mkdir(this.storageDir, { recursive: true });
-    try { const value = JSON.parse(await fs.readFile(this.historyFile, 'utf8')); this.history = Array.isArray(value) ? value.slice(0, this.limit) : []; }
+    try { const value = JSON.parse(await fs.readFile(this.historyFile, 'utf8')); this.history = Array.isArray(value) ? value : []; }
     catch (error) { if (error.code !== 'ENOENT') console.warn('Could not load screenshot history:', error.message); }
   }
 
-  list() { return this.history.map((item) => ({ ...item })); }
+  list(ownerId) {
+    return this.history.filter((item) => item.ownerId === ownerId).map(({ ownerId: ignored, ...item }) => item);
+  }
 
   async ready() {
     await fs.access(this.storageDir, constants.R_OK | constants.W_OK);
@@ -28,13 +30,15 @@ export class FileScreenshotRepository {
 
   async add(item) {
     this.history.unshift(item);
-    const evicted = this.history.splice(this.limit);
+    const evicted = this.history.filter((entry) => entry.ownerId === item.ownerId).slice(this.limit);
+    const evictedIds = new Set(evicted.map((entry) => entry.id));
+    this.history = this.history.filter((entry) => !evictedIds.has(entry.id));
     await Promise.all(evicted.map((entry) => this.#unlink(entry.filename)));
     await this.#persist();
   }
 
-  async delete(id) {
-    const index = this.history.findIndex((item) => item.id === id);
+  async delete(id, ownerId) {
+    const index = this.history.findIndex((item) => item.id === id && item.ownerId === ownerId);
     if (index < 0) return false;
     const [item] = this.history.splice(index, 1);
     await this.#unlink(item.filename);
@@ -42,11 +46,10 @@ export class FileScreenshotRepository {
     return true;
   }
 
-  async clear() {
-    const names = new Set(this.history.map(({ filename }) => filename));
-    try { (await fs.readdir(this.storageDir)).filter((name) => name !== '.gitkeep').forEach((name) => names.add(name)); } catch {}
-    const results = await Promise.all([...names].map((name) => this.#unlink(name)));
-    this.history = [];
+  async clear(ownerId) {
+    const owned = this.history.filter((item) => item.ownerId === ownerId);
+    const results = await Promise.all(owned.map(({ filename }) => this.#unlink(filename)));
+    this.history = this.history.filter((item) => item.ownerId !== ownerId);
     await this.#persist();
     return { deleted: results.filter(Boolean).length };
   }

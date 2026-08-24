@@ -162,10 +162,13 @@ The service blocks local files, localhost, private/reserved IP ranges, and URLs 
 | `TRUST_PROXY_HOPS` | `1` | Number of trusted reverse-proxy hops in production |
 | `APP_USERNAME` | empty | Optional HTTP Basic username; authentication activates when both credentials exist |
 | `APP_PASSWORD` | empty | Optional HTTP Basic password; use a long random secret |
+| `CLIENT_ID_SECRET` | random per process | Signs anonymous browser identities; set a stable random value in production |
 | `ALLOW_PRIVATE_NETWORK` | `false` | Allows private network targets; intended only for trusted local development |
 | `EXPOSE_TEST_STATIC` | `false` | Exposes `/test-static`; intended only for local development |
 
 The direct streaming endpoint does not persist generated images. Chromium and the HTTP server also shut down cleanly on `SIGINT` and `SIGTERM`.
+
+Capture history is isolated per anonymous browser using a signed, HTTP-only cookie. No account is required: visitors can only list or delete their own captures, while individual random screenshot URLs remain shareable. Set a stable `CLIENT_ID_SECRET` in production so ownership survives redeployments.
 
 ### Dokploy
 

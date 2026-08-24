@@ -67,7 +67,8 @@ router.post('/screenshot', captureRateLimit, async (req, res) => {
       blockBanners: blockBanners === true || blockBanners === 'true',
       waitAnimations: waitAnimations === true || waitAnimations === 'true',
       colorScheme,
-      isMobile: isMobile === true || isMobile === 'true'
+      isMobile: isMobile === true || isMobile === 'true',
+      ownerId: req.captureOwnerId
     });
 
     return res.json({
@@ -151,7 +152,7 @@ router.get('/screenshot/direct', captureRateLimit, async (req, res) => {
 router.get('/history', (req, res) => {
   res.json({
     success: true,
-    data: getHistory()
+    data: getHistory(req.captureOwnerId)
   });
 });
 
@@ -161,7 +162,7 @@ router.get('/history', (req, res) => {
  */
 router.delete('/history', async (req, res) => {
   try {
-    const result = await clearAllHistory();
+    const result = await clearAllHistory(req.captureOwnerId);
     return res.json({ success: true, deleted: result.deleted });
   } catch (e) {
     return res.status(500).json({ success: false, error: e.message });
@@ -174,7 +175,7 @@ router.delete('/history', async (req, res) => {
  */
 router.delete('/history/:id', async (req, res) => {
   const { id } = req.params;
-  const deleted = await deleteScreenshot(id);
+  const deleted = await deleteScreenshot(id, req.captureOwnerId);
   if (deleted) {
     return res.json({ success: true, message: 'Screenshot deleted' });
   }

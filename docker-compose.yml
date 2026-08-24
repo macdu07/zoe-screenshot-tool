@@ -21,6 +21,7 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-}
       APP_USERNAME: ${APP_USERNAME:-}
       APP_PASSWORD: ${APP_PASSWORD:-}
+      CLIENT_ID_SECRET: ${CLIENT_ID_SECRET:-}
       ALLOW_PRIVATE_NETWORK: "false"
       EXPOSE_TEST_STATIC: "false"
     volumes:

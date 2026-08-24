@@ -294,6 +294,7 @@ async function performCapture(options = {}) {
   const colorScheme = ['dark', 'light'].includes(options.colorScheme) ? options.colorScheme : 'no-preference';
   const isMobile = options.isMobile === true || options.isMobile === 'true';
   const persist = options.persist !== false;
+  const ownerId = options.ownerId;
 
   const browser = await getBrowser();
   const context = await browser.createBrowserContext();
@@ -438,7 +439,7 @@ async function performCapture(options = {}) {
     };
 
     // Add to history (limit 30 items)
-    if (persist) await repository.add(result);
+    if (persist) await repository.add({ ...result, ownerId });
 
     return {
       success: true,
@@ -465,22 +466,22 @@ export function formatBytes(bytes, decimals = 2) {
 /**
  * Get screenshot history
  */
-export function getHistory() {
-  return repository.list();
+export function getHistory(ownerId) {
+  return repository.list(ownerId);
 }
 
 /**
  * Delete a screenshot from history & disk
  */
-export async function deleteScreenshot(id) {
-  return repository.delete(id);
+export async function deleteScreenshot(id, ownerId) {
+  return repository.delete(id, ownerId);
 }
 
 /**
  * Clear ALL history entries and delete all screenshot files from disk
  */
-export async function clearAllHistory() {
-  return repository.clear();
+export async function clearAllHistory(ownerId) {
+  return repository.clear(ownerId);
 }
 
 export function getCaptureQueueStats() { return captureQueue.stats(); }
