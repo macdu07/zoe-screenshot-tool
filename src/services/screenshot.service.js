@@ -484,3 +484,5 @@ export async function clearAllHistory() {
 }
 
 export function getCaptureQueueStats() { return captureQueue.stats(); }
+
+export function checkStorageReady() { return repository.ready(); }

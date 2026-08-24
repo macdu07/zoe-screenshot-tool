@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import { constants } from 'node:fs';
 import path from 'node:path';
 
 export class FileScreenshotRepository {
@@ -17,6 +18,11 @@ export class FileScreenshotRepository {
   }
 
   list() { return this.history.map((item) => ({ ...item })); }
+
+  async ready() {
+    await fs.access(this.storageDir, constants.R_OK | constants.W_OK);
+    return true;
+  }
 
   async saveFile(filename, buffer) { await fs.writeFile(path.join(this.storageDir, path.basename(filename)), buffer); }
 

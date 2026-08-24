@@ -74,5 +74,8 @@ USER node
 # Expose port
 EXPOSE 3000
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+  CMD curl -fsS http://localhost:3000/ready || exit 1
+
 # Start application
 CMD ["node", "server.js"]

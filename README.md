@@ -159,10 +159,28 @@ The service blocks local files, localhost, private/reserved IP ranges, and URLs 
 | `NAVIGATION_TIMEOUT_MS` | `30000` | Remote navigation timeout |
 | `HISTORY_LIMIT` | `30` | Persisted capture records and files |
 | `CORS_ORIGIN` | empty | Comma-separated allowed cross-origin callers; empty disables CORS |
+| `TRUST_PROXY_HOPS` | `1` | Number of trusted reverse-proxy hops in production |
+| `APP_USERNAME` | empty | Optional HTTP Basic username; authentication activates when both credentials exist |
+| `APP_PASSWORD` | empty | Optional HTTP Basic password; use a long random secret |
 | `ALLOW_PRIVATE_NETWORK` | `false` | Allows private network targets; intended only for trusted local development |
 | `EXPOSE_TEST_STATIC` | `false` | Exposes `/test-static`; intended only for local development |
 
 The direct streaming endpoint does not persist generated images. Chromium and the HTTP server also shut down cleanly on `SIGINT` and `SIGTERM`.
+
+### Dokploy
+
+The included `docker-compose.yml` is prepared for Dokploy:
+
+1. Create a **Docker Compose** service and select this repository.
+2. Use `./docker-compose.yml` as the Compose path.
+3. Add a domain in Dokploy and route it to service `zoe-screenshot`, port `3000`.
+4. Configure the variables from `.env.example` in Dokploy's Environment tab. Set at least `APP_USERNAME`, `APP_PASSWORD`, and `CORS_ORIGIN` for the final HTTPS domain.
+5. Keep a single replica while history uses the local JSON repository.
+6. Enable backups for the named volume `zoe_storage`.
+
+The service exposes port 3000 only to the container network; Traefik handles public HTTP/HTTPS traffic. `/health` is a lightweight liveness route, while `/ready` verifies that Chromium launches and storage is writable. Both routes intentionally remain outside optional Basic authentication so Dokploy can monitor the service.
+
+For automatic rollback or zero-downtime settings, use `/ready` as the health route. Do not scale beyond one replica until screenshots and history are migrated to shared object storage and a database.
 
 ---
 

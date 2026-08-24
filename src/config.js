@@ -15,6 +15,9 @@ export const config = Object.freeze({
   captureRateLimit: intEnv('CAPTURE_RATE_LIMIT', 30),
   captureRateWindowMs: intEnv('CAPTURE_RATE_WINDOW_MS', 60_000),
   corsOrigin: process.env.CORS_ORIGIN || '',
+  trustProxyHops: intEnv('TRUST_PROXY_HOPS', 1),
+  appUsername: process.env.APP_USERNAME || '',
+  appPassword: process.env.APP_PASSWORD || '',
   allowPrivateNetwork: process.env.ALLOW_PRIVATE_NETWORK === 'true',
   exposeTestStatic: process.env.EXPOSE_TEST_STATIC === 'true'
 });
