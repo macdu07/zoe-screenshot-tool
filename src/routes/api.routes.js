@@ -1,25 +1,40 @@
 import express from 'express';
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
 import {
   captureScreenshot,
   getHistory,
   deleteScreenshot,
   clearAllHistory,
-  normalizeUrl
 } from '../services/screenshot.service.js';
+import { config } from '../config.js';
 
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STORAGE_DIR = path.resolve(__dirname, '../../storage/screenshots');
+const rateWindows = new Map();
+
+function captureRateLimit(req, res, next) {
+  const now = Date.now();
+  const key = req.ip || req.socket.remoteAddress || 'unknown';
+  let window = rateWindows.get(key);
+  if (!window || window.resetAt <= now) window = { count: 0, resetAt: now + config.captureRateWindowMs };
+  window.count++;
+  rateWindows.set(key, window);
+  res.setHeader('RateLimit-Limit', config.captureRateLimit);
+  res.setHeader('RateLimit-Remaining', Math.max(0, config.captureRateLimit - window.count));
+  res.setHeader('RateLimit-Reset', Math.ceil(window.resetAt / 1000));
+  if (rateWindows.size > 10_000) for (const [entryKey, entry] of rateWindows) if (entry.resetAt <= now) rateWindows.delete(entryKey);
+  if (window.count > config.captureRateLimit) return res.status(429).json({ success: false, code: 'RATE_LIMITED', error: 'Too many capture requests. Please try again later.' });
+  return next();
+}
 
 /**
  * POST /api/screenshot
  * Main screenshot capture endpoint (JSON response)
  */
-router.post('/screenshot', async (req, res) => {
+router.post('/screenshot', captureRateLimit, async (req, res) => {
   try {
     const {
       url,
@@ -61,8 +76,9 @@ router.post('/screenshot', async (req, res) => {
     });
   } catch (error) {
     console.error('Screenshot capture failed:', error);
-    return res.status(500).json({
+    return res.status(error.status || 500).json({
       success: false,
+      code: error.code || 'CAPTURE_FAILED',
       error: error.message || 'Failed to capture website screenshot'
     });
   }
@@ -73,7 +89,7 @@ router.post('/screenshot', async (req, res) => {
  * Direct image endpoint (returns binary image stream directly)
  * e.g., /api/screenshot/direct?url=https://stripe.com&format=png&fullPage=true&scale=2
  */
-router.get('/screenshot/direct', async (req, res) => {
+router.get('/screenshot/direct', captureRateLimit, async (req, res) => {
   try {
     const {
       url,
@@ -107,6 +123,7 @@ router.get('/screenshot/direct', async (req, res) => {
       waitAnimations: waitAnimations === 'true',
       colorScheme,
       isMobile: isMobile === 'true'
+      ,persist: false
     });
 
     const mimeMap = {
@@ -119,11 +136,11 @@ router.get('/screenshot/direct', async (req, res) => {
     const contentType = mimeMap[result.data.format] || 'image/png';
     res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Length', result.buffer.length);
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'no-store');
     return res.end(result.buffer);
   } catch (error) {
     console.error('Direct capture failed:', error);
-    return res.status(500).send(`Failed to capture screenshot: ${error.message}`);
+    return res.status(error.status || 500).send(`Failed to capture screenshot: ${error.message}`);
   }
 });
 
@@ -168,15 +185,14 @@ router.delete('/history/:id', async (req, res) => {
  * GET /api/download/:filename
  * Trigger direct file download
  */
-router.get('/download/:filename', (req, res) => {
+router.get('/download/:filename', (req, res, next) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(STORAGE_DIR, filename);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send('File not found');
-  }
-
-  res.download(filePath, filename);
+  res.download(filePath, filename, (error) => {
+    if (!error) return;
+    if (error.code === 'ENOENT') return res.status(404).send('File not found');
+    return next(error);
+  });
 });
 
 export default router;

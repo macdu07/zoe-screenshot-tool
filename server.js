@@ -1,45 +1,23 @@
-import express from 'express';
-import cors from 'cors';
-import morgan from 'morgan';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import apiRouter from './src/routes/api.routes.js';
+import { createApp } from './src/app.js';
+import { config } from './src/config.js';
+import { closeBrowser } from './src/infrastructure/browser-manager.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(cors());
-app.use(morgan('dev'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Static files
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/storage/screenshots', express.static(path.join(__dirname, 'storage/screenshots')));
-app.use('/test-static', express.static(path.join(__dirname, 'test')));
-
-// API Routes
-app.use('/api', apiRouter);
-
-// Health check
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Fallback to index.html for SPA
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
+const app = createApp();
+const server = app.listen(config.port, '0.0.0.0', () => {
   console.log(`====================================================`);
-  console.log(`🚀 Screenshot Tool server running at http://0.0.0.0:${PORT}`);
-  console.log(`🌐 API Endpoint: http://0.0.0.0:${PORT}/api/screenshot`);
-  console.log(`📷 Direct API:   http://0.0.0.0:${PORT}/api/screenshot/direct?url=https://github.com`);
+  console.log(`🚀 Screenshot Tool server running at http://0.0.0.0:${config.port}`);
+  console.log(`🌐 API Endpoint: http://0.0.0.0:${config.port}/api/screenshot`);
   console.log(`====================================================`);
 });
+
+let shuttingDown = false;
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received, shutting down...`);
+  server.close(async () => { await closeBrowser(); process.exit(0); });
+  setTimeout(async () => { await closeBrowser(); process.exit(1); }, 10_000).unref();
+}
+
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));

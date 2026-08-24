@@ -16,7 +16,6 @@ const state = {
   waitAnimations: true,
   colorScheme: 'no-preference',
   delay: 0,
-  useCache: true,
   isMobile: false,
 
   // UI state
@@ -56,7 +55,6 @@ const elements = {
   blockBannersInput: document.getElementById('block-banners'),
   themeSelector: document.getElementById('theme-selector'),
   delaySelect: document.getElementById('delay-select'),
-  useCacheInput: document.getElementById('use-cache'),
   generateBtn: document.getElementById('generate-btn'),
 
   // Preview elements
@@ -235,10 +233,6 @@ function bindEvents() {
 
   elements.blockBannersInput.addEventListener('change', (e) => {
     state.blockBanners = e.target.checked;
-  });
-
-  elements.useCacheInput.addEventListener('change', (e) => {
-    state.useCache = e.target.checked;
   });
 
   // Form Submit

@@ -1,137 +1,27 @@
-import puppeteer from 'puppeteer';
 import path from 'path';
-import fs from 'fs';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { config } from '../config.js';
+import { ResourceLimitError, UpstreamError } from '../errors.js';
+import { getBrowser } from '../infrastructure/browser-manager.js';
+import { CaptureQueue } from '../infrastructure/capture-queue.js';
+import { FileScreenshotRepository } from '../infrastructure/screenshot-repository.js';
+import { assertSafeUrl, normalizeHttpUrl } from '../infrastructure/url-policy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STORAGE_DIR = path.resolve(__dirname, '../../storage/screenshots');
 const HISTORY_FILE = path.resolve(__dirname, '../../storage/history.json');
 
-// Ensure storage directory exists
-if (!fs.existsSync(STORAGE_DIR)) {
-  fs.mkdirSync(STORAGE_DIR, { recursive: true });
-}
-
-/**
- * Load history from disk (returns array)
- */
-function loadHistory() {
-  try {
-    if (fs.existsSync(HISTORY_FILE)) {
-      const raw = fs.readFileSync(HISTORY_FILE, 'utf8');
-      return JSON.parse(raw) || [];
-    }
-  } catch (e) {
-    console.warn('Could not read history.json, starting fresh:', e.message);
-  }
-  return [];
-}
-
-/**
- * Persist history array to disk
- */
-function saveHistory(history) {
-  try {
-    fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2), 'utf8');
-  } catch (e) {
-    console.error('Could not save history.json:', e.message);
-  }
-}
-
-// Persistent capture history (latest 30), backed by history.json
-const screenshotHistory = loadHistory();
-
-let browserInstance = null;
-
-/**
- * Find the best available Chrome / Chromium executable
- */
-function findChromeExecutable() {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH && fs.existsSync(process.env.PUPPETEER_EXECUTABLE_PATH)) {
-    return process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-
-  const possiblePaths = [
-    // Linux / Docker paths
-    '/usr/bin/google-chrome-stable',
-    '/usr/bin/google-chrome',
-    '/usr/bin/chromium',
-    '/usr/bin/chromium-browser',
-    // macOS paths
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary'
-  ];
-
-  for (const p of possiblePaths) {
-    if (fs.existsSync(p)) {
-      return p;
-    }
-  }
-  return undefined;
-}
-
-/**
- * Get or initialize Puppeteer browser
- */
-async function getBrowser() {
-  if (browserInstance && browserInstance.isConnected()) {
-    return browserInstance;
-  }
-
-  const executablePath = findChromeExecutable();
-
-  const launchOptions = {
-    headless: 'new',
-    executablePath,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu',
-      '--mute-audio',
-      '--hide-scrollbars'
-    ]
-  };
-
-  try {
-    browserInstance = await puppeteer.launch(launchOptions);
-  } catch (err) {
-    console.warn('Initial launch failed, trying fallback...', err.message);
-    delete launchOptions.executablePath;
-    browserInstance = await puppeteer.launch(launchOptions);
-  }
-
-  browserInstance.on('disconnected', () => {
-    browserInstance = null;
-  });
-
-  return browserInstance;
-}
+const repository = new FileScreenshotRepository({ storageDir: STORAGE_DIR, historyFile: HISTORY_FILE, limit: config.historyLimit });
+await repository.init();
+const captureQueue = new CaptureQueue({ concurrency: config.captureConcurrency, maxPending: config.captureQueueLimit });
 
 /**
  * Clean & normalize URL
  */
 export function normalizeUrl(inputUrl) {
-  if (!inputUrl || typeof inputUrl !== 'string') {
-    throw new Error('Please provide a valid website URL');
-  }
-  let trimmed = inputUrl.trim();
-  if (!/^(https?|file):\/\//i.test(trimmed)) {
-    trimmed = `https://${trimmed}`;
-  }
-  try {
-    const parsed = new URL(trimmed);
-    return parsed.href;
-  } catch {
-    throw new Error(`Invalid URL format: "${inputUrl}"`);
-  }
+  return normalizeHttpUrl(inputUrl);
 }
 
 /**
@@ -382,10 +272,14 @@ const BANNER_KILLER_CSS = `
 /**
  * Take a website screenshot with high resolution and customizable settings
  */
-export async function captureScreenshot(options = {}) {
+export function captureScreenshot(options = {}) {
+  return captureQueue.add(() => performCapture(options));
+}
+
+async function performCapture(options = {}) {
   const startTime = Date.now();
 
-  const url = normalizeUrl(options.url);
+  const url = await assertSafeUrl(options.url, { allowPrivate: config.allowPrivateNetwork });
   const width = Math.min(Math.max(parseInt(options.width, 10) || 1920, 320), 3840);
   const height = Math.min(Math.max(parseInt(options.height, 10) || 1080, 240), 2160);
   const fullPage = options.fullPage !== false && options.fullPage !== 'false';
@@ -398,13 +292,27 @@ export async function captureScreenshot(options = {}) {
   const blockBanners = options.blockBanners !== false && options.blockBanners !== 'false';
   const waitAnimations = options.waitAnimations !== false && options.waitAnimations !== 'false';
   const colorScheme = ['dark', 'light'].includes(options.colorScheme) ? options.colorScheme : 'no-preference';
-  const isMobile = Boolean(options.isMobile);
+  const isMobile = options.isMobile === true || options.isMobile === 'true';
+  const persist = options.persist !== false;
 
   const browser = await getBrowser();
   const context = await browser.createBrowserContext();
   const page = await context.newPage();
 
   try {
+    await page.setRequestInterception(true);
+    page.on('request', async (request) => {
+      const requestUrl = request.url();
+      if (/^(data|blob|about):/i.test(requestUrl)) return request.continue().catch(() => {});
+      if (!/^https?:/i.test(requestUrl)) return request.abort('blockedbyclient').catch(() => {});
+      try {
+        await assertSafeUrl(requestUrl, { allowPrivate: config.allowPrivateNetwork });
+        await request.continue();
+      } catch {
+        await request.abort('blockedbyclient').catch(() => {});
+      }
+    });
+
     // Set realistic User Agent
     const desktopUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
     const mobileUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1';
@@ -433,21 +341,25 @@ export async function captureScreenshot(options = {}) {
     });
 
     // Navigate to page
+    let navigationResponse;
     try {
-      await page.goto(url, {
+      navigationResponse = await page.goto(url, {
         waitUntil: ['domcontentloaded', 'networkidle2'],
-        timeout: 25000
+        timeout: config.navigationTimeoutMs
       });
-    } catch {
+    } catch (firstError) {
       // Fallback navigation with domcontentloaded if networkidle2 times out on dynamic sites
       if (!page.isClosed()) {
         try {
-          await page.goto(url, { waitUntil: 'load', timeout: 10000 });
-        } catch {
-          // Continue if already partly loaded
+          navigationResponse = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: Math.min(config.navigationTimeoutMs, 10_000) });
+        } catch (secondError) {
+          const timeout = /timeout/i.test(`${firstError.message} ${secondError.message}`);
+          throw new UpstreamError(timeout ? 'Target website did not load before the timeout' : 'Could not load target website', { timeout, cause: secondError });
         }
       }
     }
+    if (!navigationResponse) throw new UpstreamError('Target website did not return a response');
+    if (navigationResponse.status() >= 400) throw new UpstreamError(`Target website returned HTTP ${navigationResponse.status()}`);
 
     // Block ads, cookie notices and banners if enabled
     if (blockBanners) {
@@ -473,6 +385,8 @@ export async function captureScreenshot(options = {}) {
 
     const effectiveWidth = Math.round((fullPage ? dimensions.scrollWidth : width) * scale);
     const effectiveHeight = Math.round((fullPage ? dimensions.scrollHeight : height) * scale);
+    if (dimensions.scrollHeight > config.maxPageHeight) throw new ResourceLimitError(`Page height exceeds the ${config.maxPageHeight}px limit`);
+    if (effectiveWidth * effectiveHeight > config.maxOutputPixels) throw new ResourceLimitError('Rendered screenshot exceeds the configured pixel limit');
 
     // WebP specification has a hard limit of 16,383 x 16,383 px in Chromium/libwebp
     let finalFormat = format;
@@ -491,14 +405,13 @@ export async function captureScreenshot(options = {}) {
     }
 
     const buffer = await page.screenshot(screenshotOptions);
+    if (buffer.length > config.maxScreenshotBytes) throw new ResourceLimitError('Screenshot exceeds the configured file-size limit');
 
     // Save to disk
     const id = crypto.randomBytes(12).toString('hex');
     const fileExtension = finalFormat === 'jpeg' ? 'jpg' : finalFormat;
     const filename = `screenshot-${id}.${fileExtension}`;
-    const filePath = path.join(STORAGE_DIR, filename);
-
-    await fs.promises.writeFile(filePath, buffer);
+    if (persist) await repository.saveFile(filename, buffer);
 
     const durationMs = Date.now() - startTime;
     const sizeBytes = buffer.length;
@@ -520,16 +433,12 @@ export async function captureScreenshot(options = {}) {
       sizeFormatted,
       durationMs,
       timestamp: new Date().toISOString(),
-      downloadUrl: `/api/download/${filename}`,
-      viewUrl: `/storage/screenshots/${filename}`
+      downloadUrl: persist ? `/api/download/${filename}` : null,
+      viewUrl: persist ? `/storage/screenshots/${filename}` : null
     };
 
     // Add to history (limit 30 items)
-    screenshotHistory.unshift(result);
-    if (screenshotHistory.length > 30) {
-      screenshotHistory.pop();
-    }
-    saveHistory(screenshotHistory);
+    if (persist) await repository.add(result);
 
     return {
       success: true,
@@ -557,65 +466,21 @@ export function formatBytes(bytes, decimals = 2) {
  * Get screenshot history
  */
 export function getHistory() {
-  return screenshotHistory;
+  return repository.list();
 }
 
 /**
  * Delete a screenshot from history & disk
  */
 export async function deleteScreenshot(id) {
-  const index = screenshotHistory.findIndex((item) => item.id === id);
-  if (index !== -1) {
-    const item = screenshotHistory[index];
-    const filePath = path.join(STORAGE_DIR, item.filename);
-    try {
-      if (fs.existsSync(filePath)) {
-        await fs.promises.unlink(filePath);
-      }
-    } catch (e) {
-      console.error('Error deleting file:', e);
-    }
-    screenshotHistory.splice(index, 1);
-    saveHistory(screenshotHistory);
-    return true;
-  }
-  return false;
+  return repository.delete(id);
 }
 
 /**
  * Clear ALL history entries and delete all screenshot files from disk
  */
 export async function clearAllHistory() {
-  let deleted = 0;
-
-  // Delete every file referenced in history
-  for (const item of screenshotHistory) {
-    const filePath = path.join(STORAGE_DIR, item.filename);
-    try {
-      if (fs.existsSync(filePath)) {
-        await fs.promises.unlink(filePath);
-        deleted++;
-      }
-    } catch (e) {
-      console.error('Error deleting file:', item.filename, e);
-    }
-  }
-
-  // Also sweep the directory for any orphaned files not in history
-  try {
-    const files = await fs.promises.readdir(STORAGE_DIR);
-    for (const file of files) {
-      if (file === '.gitkeep') continue;
-      try {
-        await fs.promises.unlink(path.join(STORAGE_DIR, file));
-        deleted++;
-      } catch (e) {}
-    }
-  } catch (e) {}
-
-  // Clear in-memory array and persist
-  screenshotHistory.length = 0;
-  saveHistory(screenshotHistory);
-
-  return { deleted };
+  return repository.clear();
 }
+
+export function getCaptureQueueStats() { return captureQueue.stats(); }

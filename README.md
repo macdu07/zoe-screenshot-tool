@@ -139,6 +139,31 @@ Or test all formats:
 node test/test-formats.js
 ```
 
+The default test suite is deterministic and does not require Internet access or launch Chromium.
+
+---
+
+## Production configuration
+
+The service blocks local files, localhost, private/reserved IP ranges, and URLs containing credentials by default. It also limits concurrent captures, queued work, output dimensions, file size, and requests per client.
+
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `CAPTURE_CONCURRENCY` | `2` | Maximum simultaneous browser captures |
+| `CAPTURE_QUEUE_LIMIT` | `20` | Maximum waiting capture requests |
+| `CAPTURE_RATE_LIMIT` | `30` | Captures allowed per client per window |
+| `CAPTURE_RATE_WINDOW_MS` | `60000` | Rate-limit window in milliseconds |
+| `MAX_OUTPUT_PIXELS` | `100000000` | Maximum final rendered pixel count |
+| `MAX_PAGE_HEIGHT` | `30000` | Maximum document height in CSS pixels |
+| `MAX_SCREENSHOT_BYTES` | `52428800` | Maximum generated image size |
+| `NAVIGATION_TIMEOUT_MS` | `30000` | Remote navigation timeout |
+| `HISTORY_LIMIT` | `30` | Persisted capture records and files |
+| `CORS_ORIGIN` | empty | Comma-separated allowed cross-origin callers; empty disables CORS |
+| `ALLOW_PRIVATE_NETWORK` | `false` | Allows private network targets; intended only for trusted local development |
+| `EXPOSE_TEST_STATIC` | `false` | Exposes `/test-static`; intended only for local development |
+
+The direct streaming endpoint does not persist generated images. Chromium and the HTTP server also shut down cleanly on `SIGINT` and `SIGTERM`.
+
 ---
 
 ## Tech Stack

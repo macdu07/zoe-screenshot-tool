@@ -66,8 +66,10 @@ RUN npm ci --omit=dev
 # Copy application source code
 COPY . .
 
-# Ensure storage directories exist with proper permissions
-RUN mkdir -p storage/screenshots && chmod -R 777 storage
+# Runtime data belongs to the unprivileged Node user
+RUN mkdir -p storage/screenshots && chown -R node:node /app
+
+USER node
 
 # Expose port
 EXPOSE 3000

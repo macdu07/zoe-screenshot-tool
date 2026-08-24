@@ -12,9 +12,17 @@ services:
       - PORT=3000
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
       - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+      - CAPTURE_CONCURRENCY=2
+      - CAPTURE_QUEUE_LIMIT=20
+      - MAX_OUTPUT_PIXELS=100000000
     volumes:
       - zoe_storage:/app/storage
     shm_size: '2gb'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   zoe_storage:
