@@ -23,6 +23,7 @@ const state = {
   zoom: 1.0,
   autoFitPreview: false,
   currentScreenshot: null,
+  installPrompt: null,
   history: []
 };
 
@@ -96,12 +97,52 @@ const elements = {
   toastContainer: document.getElementById('toast-container')
 };
 
+elements.installAppBtn = document.getElementById('install-app-btn');
+
 /**
  * Initialize Application
  */
 function init() {
   bindEvents();
   loadHistory();
+  setupPwa();
+}
+
+function setupPwa() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch((error) => {
+      console.warn('Service worker registration failed:', error);
+    });
+  }
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    state.installPrompt = event;
+    elements.installAppBtn.hidden = false;
+  });
+
+  if (isIos && !isStandalone) elements.installAppBtn.hidden = false;
+
+  window.addEventListener('appinstalled', () => {
+    state.installPrompt = null;
+    elements.installAppBtn.hidden = true;
+    showToast('Zoe Screenshot was installed successfully!', 'success');
+  });
+
+  elements.installAppBtn.addEventListener('click', async () => {
+    if (!state.installPrompt) {
+      showToast('On iPhone or iPad, use Share → Add to Home Screen', 'success');
+      return;
+    }
+    state.installPrompt.prompt();
+    const result = await state.installPrompt.userChoice;
+    state.installPrompt = null;
+    elements.installAppBtn.hidden = true;
+    if (result.outcome === 'dismissed') showToast('Installation cancelled', 'error');
+  });
 }
 
 /**

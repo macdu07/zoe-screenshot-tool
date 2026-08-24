@@ -6,6 +6,7 @@ A high-performance, pixel-perfect website screenshot tool and API. Built with **
 
 ## Features
 
+- **Installable PWA**: Install Zoe Screenshot on desktop, Android, iPhone, or iPad with standalone display and an offline-ready application shell.
 - **Full-Page & Viewport Modes**: Capture the entire scrollable height or only the above-the-fold viewport.
 - **Multiple Formats**: Export in **PNG** (lossless), **JPG** (customizable quality), and **WEBP** (modern, ultra-lightweight).
 - **High-Resolution / Retina (1x, 2x, 3x)**: Crisp, razor-sharp output scaling (`deviceScaleFactor: 2` or `3`).
@@ -167,6 +168,10 @@ The service blocks local files, localhost, private/reserved IP ranges, and URLs 
 | `EXPOSE_TEST_STATIC` | `false` | Exposes `/test-static`; intended only for local development |
 
 The direct streaming endpoint does not persist generated images. Chromium and the HTTP server also shut down cleanly on `SIGINT` and `SIGTERM`.
+
+### PWA behavior
+
+The interface can be installed from the in-app **Install app** button when the browser exposes the installation prompt. On iPhone and iPad, use **Share → Add to Home Screen**. The service worker caches only the local application shell; API requests and generated screenshots always remain network-only to preserve anonymous-history isolation and fresh capture results.
 
 Capture history is isolated per anonymous browser using a signed, HTTP-only cookie. No account is required: visitors can only list or delete their own captures, while individual random screenshot URLs remain shareable. Set a stable `CLIENT_ID_SECRET` in production so ownership survives redeployments.
 
